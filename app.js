@@ -288,7 +288,7 @@ const STRIP_TAB_LAYERS = {
   dial: ['knob', 'module']
 };
 const STRIP_HINTS = {
-  background: 'Strip background, frames and edge shadows export together. A shared frame edge joins into one piece and keeps the inner shadow on both dials.',
+  background: 'Strip background, frames and edge shadows export together. A frame stays on its dial and still casts its inner shadow onto the dial beside it. A shared edge joins into one piece.',
   dial: 'Knob shadows and modules export with the selected dial, on a transparent 200×100 image.'
 };
 const READY_HINT = 'Choices follow every selected key. Enclosure closes a solid block.';
@@ -314,7 +314,7 @@ function loadImage(file) {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(file));
-    img.src = ASSET + file + '?v=26';
+    img.src = ASSET + file + '?v=27';
   });
 }
 
@@ -1527,11 +1527,13 @@ function drawStripFrames(board) {
     if (stripWants(choice, 'l') && !joinLeft) {
       const img = images.get('strip/strip_frame_l.png');
       if (img) stripCtx.drawImage(img, x, 0);
+      if (index > 0) drawNeighborInnerShadow('l', x);
     }
     if (stripWants(choice, 'r')) {
       const img = images.get('strip/strip_frame_r.png');
       if (img) stripCtx.drawImage(img, x + (joinRight ? FRAME_JOIN : 0), 0);
       if (joinRight) drawJoinedInnerShadow(x);
+      else if (index < dials - 1) drawNeighborInnerShadow('r', x);
     }
   });
 }
@@ -1541,6 +1543,17 @@ function drawJoinedInnerShadow(leftX) {
   if (!inner) return;
   const destX = leftX + FRAME_JOIN + STRIP_DIAL_W;
   stripCtx.drawImage(inner, FRAME_INNER_X, 0, FRAME_INNER_W, inner.height, destX, 0, FRAME_INNER_W, inner.height);
+}
+
+// Frame wood stays in its own dial. The exported spill shadow is drawn on the neighbor.
+function drawNeighborInnerShadow(side, x) {
+  if (side === 'r') {
+    const img = images.get('strip/strip_frame_shadow_spill_l.png');
+    if (img) stripCtx.drawImage(img, x + STRIP_DIAL_W, 0);
+    return;
+  }
+  const img = images.get('strip/strip_frame_shadow_spill_r.png');
+  if (img) stripCtx.drawImage(img, x - STRIP_DIAL_W, 0);
 }
 
 function strokeDial(index, primary, spec) {
@@ -1914,6 +1927,7 @@ const files = [...new Set(DEVICES.flatMap((device) => {
 }).concat([
   'strip/Background.png',
   'strip/strip_frame_l.png', 'strip/strip_frame_r.png', 'strip/strip_frame_lr.png',
+  'strip/strip_frame_shadow_spill_l.png', 'strip/strip_frame_shadow_spill_r.png',
   'strip/strip_shadow_l.png', 'strip/strip_shadow_r.png', 'strip/strip_shadow_lr.png',
   'strip/strip_shadow_knob.png', 'strip/strip_shadow_knob_mod.png', 'strip/strip_shadow_knob_panels.png', 'strip/strip_shadow_knob_title.png',
   'strip/strip_module_l.png', 'strip/strip_module_l2.png', 'strip/strip_module_c.png', 'strip/strip_module_r.png',
