@@ -284,11 +284,11 @@ const stripView = document.getElementById('strip-view');
 let stripTab = 'background';
 const stripHide = { background: false, dial: false };
 const STRIP_TAB_LAYERS = {
-  background: ['frame', 'shadow'],
+  background: ['frame', 'texture', 'shadow'],
   dial: ['knob', 'module']
 };
 const STRIP_HINTS = {
-  background: 'Strip background, frames and edge shadows export together. A frame stays on its dial and still casts its inner shadow onto the dial beside it. A shared edge joins into one piece.',
+  background: 'Strip background, frames, shadow textures and edge shadows export together. A frame stays on its dial and still casts its inner shadow onto the dial beside it. A shared edge joins into one piece.',
   dial: 'Knob shadows and modules export with the selected dial, on a transparent 200×100 image.'
 };
 const READY_HINT = 'Choices follow every selected key. Enclosure closes a solid block.';
@@ -314,7 +314,7 @@ function loadImage(file) {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(file));
-    img.src = ASSET + file + '?v=27';
+    img.src = ASSET + file + '?v=28';
   });
 }
 
@@ -1345,7 +1345,7 @@ clearKey.addEventListener('click', () => {
 function emptyStripBoard(dials) {
   return {
     bg: 'strip/Background.png',
-    slots: Array.from({ length: dials }, () => ({ frame: '', shadow: '', knob: '', module: '' })),
+    slots: Array.from({ length: dials }, () => ({ frame: '', texture: '', shadow: '', knob: '', module: '' })),
     anchor: 0,
     picked: new Set([0])
   };
@@ -1364,6 +1364,15 @@ const STRIP_DIAL_LAYERS = [
       { id: 'l', file: 'strip/strip_frame_l.png' },
       { id: 'r', file: 'strip/strip_frame_r.png' },
       { id: 'lr', file: 'strip/strip_frame_lr.png' }
+    ]
+  },
+  {
+    id: 'texture',
+    label: 'Shadow Texture',
+    options: [
+      { id: 'l', file: 'strip/shadow_texture_l.png' },
+      { id: 'r', file: 'strip/shadow_texture_r.png' },
+      { id: 'lr', pair: ['strip/shadow_texture_l.png', 'strip/shadow_texture_r.png'] }
     ]
   },
   {
@@ -1460,6 +1469,7 @@ function paintStrip(showSelection, mode) {
   const background = paintMode === 'full' || paintMode === 'background';
   const dials = paintMode === 'full' || paintMode === 'dials';
   if (background && bg) stripCtx.drawImage(bg, 0, 0);
+  if (background) drawStripTexture(board);
   if (dials) {
     drawStripPiece(board, 'knob');
     drawStripPiece(board, 'module');
@@ -1500,6 +1510,20 @@ function drawStripPiece(board, layerId) {
   board.slots.forEach((slot, index) => {
     const img = images.get(stripLayerFile(layerId, slot[layerId]));
     if (img) stripCtx.drawImage(img, index * STRIP_DIAL_W, 0);
+  });
+}
+
+function drawStripTexture(board) {
+  board.slots.forEach((slot, index) => {
+    const x = index * STRIP_DIAL_W;
+    if (stripWants(slot.texture, 'l')) {
+      const img = images.get('strip/shadow_texture_l.png');
+      if (img) stripCtx.drawImage(img, x, 0);
+    }
+    if (stripWants(slot.texture, 'r')) {
+      const img = images.get('strip/shadow_texture_r.png');
+      if (img) stripCtx.drawImage(img, x, 0);
+    }
   });
 }
 
@@ -1648,12 +1672,33 @@ function stripDialBlock(board, layer, selected) {
   const row = document.createElement('div');
   row.className = 'choices' + (layer.options.length <= 2 ? ' fit' : '');
   row.appendChild(stripChoice('', null, current === '', () => setStripLayer(layer.id, '')));
-  const edge = layer.id === 'frame' || layer.id === 'shadow';
+  const edge = layer.id === 'frame' || layer.id === 'shadow' || layer.id === 'texture';
   layer.options.forEach((option) => {
+    if (option.pair) {
+      row.appendChild(stripPairChoice(option.pair, current === option.id, () => setStripLayer(layer.id, option.id)));
+      return;
+    }
     row.appendChild(stripChoice(option.file, images.get(option.file), current === option.id, () => setStripLayer(layer.id, option.id), edge ? option.id : ''));
   });
   block.appendChild(row);
   return block;
+}
+
+function stripPairChoice(files, on, action) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'choice' + (on ? ' on' : '');
+  button.setAttribute('aria-label', 'Left and right');
+  const pair = document.createElement('span');
+  pair.className = 'thumb-pair';
+  const [leftFile, rightFile] = files;
+  const left = images.get(leftFile);
+  const right = images.get(rightFile);
+  if (left) pair.appendChild(stripThumb(left.src, 'l'));
+  if (right) pair.appendChild(stripThumb(right.src, 'r'));
+  button.appendChild(pair);
+  button.addEventListener('click', action);
+  return button;
 }
 
 function stripChoice(file, img, on, action, anchor) {
@@ -1928,6 +1973,7 @@ const files = [...new Set(DEVICES.flatMap((device) => {
   'strip/Background.png',
   'strip/strip_frame_l.png', 'strip/strip_frame_r.png', 'strip/strip_frame_lr.png',
   'strip/strip_frame_shadow_spill_l.png', 'strip/strip_frame_shadow_spill_r.png',
+  'strip/shadow_texture_l.png', 'strip/shadow_texture_r.png',
   'strip/strip_shadow_l.png', 'strip/strip_shadow_r.png', 'strip/strip_shadow_lr.png',
   'strip/strip_shadow_knob.png', 'strip/strip_shadow_knob_mod.png', 'strip/strip_shadow_knob_panels.png', 'strip/strip_shadow_knob_title.png',
   'strip/strip_module_l.png', 'strip/strip_module_l2.png', 'strip/strip_module_c.png', 'strip/strip_module_r.png',
