@@ -314,7 +314,7 @@ function loadImage(file) {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(file));
-    img.src = ASSET + file + '?v=28';
+    img.src = ASSET + file + '?v=29';
   });
 }
 
@@ -1469,12 +1469,12 @@ function paintStrip(showSelection, mode) {
   const background = paintMode === 'full' || paintMode === 'background';
   const dials = paintMode === 'full' || paintMode === 'dials';
   if (background && bg) stripCtx.drawImage(bg, 0, 0);
-  if (background) drawStripTexture(board);
   if (dials) {
     drawStripPiece(board, 'knob');
     drawStripPiece(board, 'module');
   }
   if (background) {
+    drawStripTexture(board);
     drawStripShadows(board);
     drawStripFrames(board);
   }
